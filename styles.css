@@ -1,0 +1,179 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  min-height: 100vh;
+  padding: 2.5rem 2rem;
+}
+
+/* ── Header ── */
+
+h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 0.4rem;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  text-align: center;
+  font-size: 0.82rem;
+  color: #888;
+  margin-bottom: 2rem;
+}
+
+/* ── Panels ── */
+
+.container {
+  display: flex;
+  gap: 1.25rem;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel label {
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #aaa;
+  margin-bottom: 0.5rem;
+}
+
+/* ── Textareas ── */
+
+textarea {
+  width: 100%;
+  height: 460px;
+  padding: 1rem;
+  font-family: "SF Mono", "Fira Code", "Cascadia Code", "Consolas", monospace;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: #d4d4d4;
+  background: #16213e;
+  border: 1px solid #2a2a4a;
+  border-radius: 8px;
+  resize: vertical;
+  tab-size: 2;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+textarea::placeholder {
+  color: #555;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: #4a6fa5;
+  box-shadow: 0 0 0 3px rgba(74, 111, 165, 0.2);
+}
+
+#output {
+  background: #0f1a30;
+  color: #a8d8a8;
+}
+
+/* ── Buttons ── */
+
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+button {
+  padding: 0.6rem 1.6rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+#convertBtn {
+  background: #4a6fa5;
+  color: #fff;
+}
+
+#convertBtn:hover {
+  background: #5a82bb;
+}
+
+#copyBtn {
+  background: #2d6a4f;
+  color: #fff;
+}
+
+#copyBtn:hover {
+  background: #3a7d5e;
+}
+
+#clearBtn {
+  background: #2a2a4a;
+  color: #bbb;
+}
+
+#clearBtn:hover {
+  background: #3a3a5a;
+}
+
+/* ── Toast ── */
+
+.toast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #e0e0e0;
+  color: #1a1a2e;
+  padding: 0.5rem 1.4rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 768px) {
+  body {
+    padding: 1.5rem 1rem;
+  }
+
+  .container {
+    flex-direction: column;
+  }
+
+  textarea {
+    height: 300px;
+  }
+}
