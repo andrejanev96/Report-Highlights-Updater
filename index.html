@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Report Highlights Converter</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+      padding: 2rem;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .container {
+      display: flex;
+      gap: 1rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    label {
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    textarea {
+      width: 100%;
+      height: 420px;
+      padding: 0.75rem;
+      font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      resize: vertical;
+      tab-size: 2;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: #4a90d9;
+      box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.25);
+    }
+
+    #output {
+      background: #fafafa;
+      cursor: text;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+      margin: 1rem 0;
+    }
+
+    button {
+      padding: 0.55rem 1.4rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    #convertBtn {
+      background: #4a90d9;
+      color: #fff;
+    }
+    #convertBtn:hover { background: #3a7bc8; }
+
+    #copyBtn {
+      background: #5cb85c;
+      color: #fff;
+    }
+    #copyBtn:hover { background: #4cae4c; }
+
+    #clearBtn {
+      background: #e0e0e0;
+      color: #333;
+    }
+    #clearBtn:hover { background: #d0d0d0; }
+
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #333;
+      color: #fff;
+      padding: 0.5rem 1.2rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+<h1>Report Highlights Converter</h1>
+
+<div class="container">
+  <div class="panel">
+    <label for="input">Old HTML (content-box)</label>
+    <textarea id="input" placeholder="Paste the old content-box HTML here..."></textarea>
+  </div>
+  <div class="panel">
+    <label for="output">New HTML (report-highlights)</label>
+    <textarea id="output" readonly placeholder="Converted HTML will appear here..."></textarea>
+  </div>
+</div>
+
+<div class="actions">
+  <button id="convertBtn">Convert</button>
+  <button id="copyBtn">Copy Output</button>
+  <button id="clearBtn">Clear</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const inputEl = document.getElementById("input");
+  const outputEl = document.getElementById("output");
+  const toast = document.getElementById("toast");
+
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 1800);
+  }
+
+  function convert(html) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+
+    // Find the inner data div — handles both the full wrapper and just the data div
+    const dataDiv =
+      doc.querySelector(".content-box__data") || doc.querySelector(".content-box");
+
+    if (!dataDiv) {
+      throw new Error("Could not find a .content-box__data or .content-box element.");
+    }
+
+    // --- Header paragraph ---
+    // The first <p> inside data contains the anchor + "Report Highlights" + intro text
+    const headerP = dataDiv.querySelector("p");
+    if (!headerP) {
+      throw new Error("Could not find the header paragraph.");
+    }
+
+    // Remove the <a name="report-highlights"> anchor if present
+    const anchor = headerP.querySelector('a[name="report-highlights"]');
+    if (anchor) anchor.remove();
+
+    // Rebuild header inner HTML:
+    // Original pattern: <strong>Report Highlights</strong>: intro text with <strong> spans
+    // Target pattern:  <strong><u>Report Highlights</u>:</strong> intro text with <strong> spans
+    let headerHTML = headerP.innerHTML.trim();
+
+    // Replace the leading <strong>Report Highlights</strong>: pattern
+    headerHTML = headerHTML.replace(
+      /\s*<strong>\s*Report Highlights\s*<\/strong>\s*:\s*/i,
+      "\n    <strong><u>Report Highlights</u>:</strong> "
+    );
+
+    // --- List items ---
+    const ul = dataDiv.querySelector("ul");
+    if (!ul) {
+      throw new Error("Could not find the <ul> list.");
+    }
+
+    const listItems = ul.querySelectorAll("li");
+    let liBlocks = "";
+
+    listItems.forEach((li) => {
+      // Get the <p> inside the <li>
+      const p = li.querySelector("p");
+      const pHTML = p ? p.innerHTML.trim() : li.innerHTML.trim();
+
+      liBlocks +=
+        '    <li>\n' +
+        '      <i class="icon-info"></i>\n' +
+        '      <p>' + pHTML + '</p>\n' +
+        '    </li>\n';
+    });
+
+    // Assemble final output
+    const output =
+      '<div class="report-highlights">\n' +
+      '  <p class="report-highlights__header">' + headerHTML + '\n' +
+      '  </p>\n' +
+      '  <ul class="report-highlights__list">\n' +
+      liBlocks +
+      '  </ul>\n' +
+      '</div>';
+
+    return output;
+  }
+
+  document.getElementById("convertBtn").addEventListener("click", () => {
+    const raw = inputEl.value.trim();
+    if (!raw) {
+      showToast("Paste some HTML first.");
+      return;
+    }
+    try {
+      outputEl.value = convert(raw);
+      showToast("Converted!");
+    } catch (e) {
+      outputEl.value = "";
+      showToast("Error: " + e.message);
+    }
+  });
+
+  document.getElementById("copyBtn").addEventListener("click", () => {
+    const text = outputEl.value;
+    if (!text) {
+      showToast("Nothing to copy.");
+      return;
+    }
+    navigator.clipboard.writeText(text).then(() => showToast("Copied!"));
+  });
+
+  document.getElementById("clearBtn").addEventListener("click", () => {
+    inputEl.value = "";
+    outputEl.value = "";
+    inputEl.focus();
+  });
+</script>
+
+</body>
+</html>
