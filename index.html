@@ -3,55 +3,122 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Report Highlights Converter</title>
+  <title>Report Highlights Tool</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-<h1>Report Highlights Converter</h1>
-<p class="subtitle">Paste old content-box markup and convert to the new report-highlights format.</p>
+<h1>Report Highlights Tool</h1>
+<p class="subtitle">Convert old markup or create new report-highlights HTML from scratch.</p>
 
-<div class="container">
-  <div class="panel">
-    <label for="input">Old HTML</label>
-    <textarea id="input" placeholder="Paste the old content-box HTML here..."></textarea>
-  </div>
-  <div class="panel">
-    <label for="output">New HTML</label>
-    <textarea id="output" readonly placeholder="Converted HTML will appear here..."></textarea>
-  </div>
+<div class="tabs">
+  <button class="tab active" data-tab="convert">Convert</button>
+  <button class="tab" data-tab="create">Create</button>
 </div>
 
-<div class="actions">
-  <button id="convertBtn">Convert</button>
-  <button id="copyBtn">Copy Output</button>
-  <button id="clearBtn">Clear</button>
-</div>
+<!-- Convert section -->
+<section id="convert-section" class="section">
+  <div class="container">
+    <div class="panel">
+      <label for="convert-input">Old HTML</label>
+      <textarea id="convert-input" spellcheck="false" placeholder="Paste the old content-box HTML here..."></textarea>
+    </div>
+    <div class="panel">
+      <label for="convert-output">New HTML</label>
+      <textarea id="convert-output" readonly spellcheck="false" placeholder="Converted HTML will appear here..."></textarea>
+    </div>
+  </div>
+  <div class="actions">
+    <button id="convertBtn">Convert</button>
+    <button class="copy-btn" data-target="convert-output">Copy Output</button>
+    <button class="clear-btn" data-input="convert-input" data-output="convert-output">Clear</button>
+  </div>
+</section>
+
+<!-- Create section -->
+<section id="create-section" class="section hidden">
+  <div class="container">
+    <div class="panel">
+      <label for="create-input">Plain Text Brief</label>
+      <textarea id="create-input" spellcheck="false" placeholder="Report Highlights: Your intro text here.&#10;&#10;● First bullet point&#10;● Second bullet point&#10;● Third bullet point"></textarea>
+    </div>
+    <div class="panel">
+      <label for="create-output">Generated HTML</label>
+      <textarea id="create-output" readonly spellcheck="false" placeholder="Generated HTML will appear here..."></textarea>
+    </div>
+  </div>
+  <div class="actions">
+    <button id="generateBtn">Generate</button>
+    <button class="copy-btn" data-target="create-output">Copy Output</button>
+    <button class="clear-btn" data-input="create-input" data-output="create-output">Clear</button>
+  </div>
+</section>
 
 <div class="toast" id="toast"></div>
 
 <script>
-  const inputEl = document.getElementById("input");
-  const outputEl = document.getElementById("output");
   const toast = document.getElementById("toast");
+  let toastTimer;
 
-  function showToast(msg) {
+  function showToast(msg, isError) {
+    clearTimeout(toastTimer);
     toast.textContent = msg;
+    toast.classList.toggle("toast--error", !!isError);
     toast.classList.add("show");
-    setTimeout(() => toast.classList.remove("show"), 1800);
+    toastTimer = setTimeout(() => toast.classList.remove("show"), 1800);
   }
+
+  // ── Tabs ──
+
+  document.querySelectorAll(".tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+      tab.classList.add("active");
+
+      document.querySelectorAll(".section").forEach((s) => s.classList.add("hidden"));
+      document.getElementById(tab.dataset.tab + "-section").classList.remove("hidden");
+    });
+  });
+
+  // ── Shared buttons ──
+
+  document.querySelectorAll(".copy-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const text = document.getElementById(btn.dataset.target).value;
+      if (!text) { showToast("Nothing to copy."); return; }
+      navigator.clipboard.writeText(text).then(() => showToast("Copied!"));
+    });
+  });
+
+  document.querySelectorAll(".clear-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const inputEl = document.getElementById(btn.dataset.input);
+      const outputEl = document.getElementById(btn.dataset.output);
+      inputEl.value = "";
+      outputEl.value = "";
+      inputEl.focus();
+    });
+  });
+
+  // ── Flash effect on output update ──
+
+  function flashOutput(el) {
+    el.classList.remove("flash");
+    void el.offsetWidth; // force reflow
+    el.classList.add("flash");
+  }
+
+  // ── Convert ──
 
   function convert(html) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, "text/html");
 
-    // Find the container — either the content-box wrapper or the body itself
     const container =
       doc.querySelector(".content-box__data") ||
       doc.querySelector(".content-box") ||
       doc.body;
 
-    // --- Locate the header paragraph ---
     const allPs = container.querySelectorAll("p");
     let headerP = null;
     for (const p of allPs) {
@@ -65,29 +132,23 @@
       throw new Error('Could not find a paragraph containing "Report Highlights".');
     }
 
-    // Remove the <a name="report-highlights"> anchor if present
     const anchor = headerP.querySelector('a[name="report-highlights"]');
     if (anchor) anchor.remove();
 
-    // Rebuild header inner HTML
     let headerHTML = headerP.innerHTML.trim();
 
-    // Format 1: <strong>Report Highlights</strong>: intro text...
     headerHTML = headerHTML.replace(
       /\s*<strong>\s*Report Highlights\s*<\/strong>\s*:\s*/i,
       "\n    <strong><u>Report Highlights</u>:</strong> "
     );
 
-    // Format 2: <u>Report Highlights</u>:
     headerHTML = headerHTML.replace(
       /\s*<u>\s*Report Highlights\s*<\/u>\s*:\s*/i,
       "\n    <strong><u>Report Highlights</u>:</strong> "
     );
 
-    // Trim trailing whitespace from header (handles no-intro-text case)
     headerHTML = headerHTML.trimEnd();
 
-    // --- List items ---
     const ul = container.querySelector("ul");
     if (!ul) {
       throw new Error("Could not find the <ul> list.");
@@ -107,47 +168,141 @@
         '    </li>\n';
     });
 
-    // Assemble final output
-    const output =
+    return (
       '<div class="report-highlights">\n' +
       '  <p class="report-highlights__header">' + headerHTML + '\n' +
       '  </p>\n' +
       '  <ul class="report-highlights__list">\n' +
       liBlocks +
       '  </ul>\n' +
-      '</div>';
+      '</div>'
+    );
+  }
 
-    return output;
+  function runConvert() {
+    const inputEl = document.getElementById("convert-input");
+    const outputEl = document.getElementById("convert-output");
+    const raw = inputEl.value.trim();
+    if (!raw) { outputEl.value = ""; return; }
+    try {
+      outputEl.value = convert(raw);
+      flashOutput(outputEl);
+    } catch (e) {
+      outputEl.value = "";
+    }
   }
 
   document.getElementById("convertBtn").addEventListener("click", () => {
-    const raw = inputEl.value.trim();
-    if (!raw) {
-      showToast("Paste some HTML first.");
-      return;
-    }
+    const raw = document.getElementById("convert-input").value.trim();
+    if (!raw) { showToast("Paste some HTML first."); return; }
     try {
+      const outputEl = document.getElementById("convert-output");
       outputEl.value = convert(raw);
+      flashOutput(outputEl);
       showToast("Converted!");
     } catch (e) {
+      document.getElementById("convert-output").value = "";
+      showToast("Error: " + e.message, true);
+    }
+  });
+
+  // ── Create ──
+
+  function create(text) {
+    const lines = text.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
+
+    if (lines.length === 0) {
+      throw new Error("Input is empty.");
+    }
+
+    let firstLine = lines[0];
+    let intro = "";
+
+    const headerMatch = firstLine.match(/^Report Highlights\s*:\s*(.*)/i);
+    if (headerMatch) {
+      intro = headerMatch[1].trim();
+    } else {
+      intro = firstLine.replace(/^[●•*\-]\s*/, "").trim();
+    }
+
+    const items = lines.slice(headerMatch ? 1 : 0);
+    const bulletItems = items
+      .map((l) => l.replace(/^[●•*\-]\s*/, "").trim())
+      .filter((l) => l.length > 0);
+
+    if (bulletItems.length === 0) {
+      throw new Error("No list items found.");
+    }
+
+    let headerContent = "\n    <strong><u>Report Highlights</u>:</strong>";
+    if (intro) {
+      headerContent += " " + intro;
+    }
+
+    let liBlocks = "";
+    bulletItems.forEach((item) => {
+      liBlocks +=
+        '    <li>\n' +
+        '      <i class="icon-info"></i>\n' +
+        '      <p>' + item + '</p>\n' +
+        '    </li>\n';
+    });
+
+    return (
+      '<div class="report-highlights">\n' +
+      '  <p class="report-highlights__header">' + headerContent + '\n' +
+      '  </p>\n' +
+      '  <ul class="report-highlights__list">\n' +
+      liBlocks +
+      '  </ul>\n' +
+      '</div>'
+    );
+  }
+
+  function runCreate() {
+    const inputEl = document.getElementById("create-input");
+    const outputEl = document.getElementById("create-output");
+    const raw = inputEl.value.trim();
+    if (!raw) { outputEl.value = ""; return; }
+    try {
+      outputEl.value = create(raw);
+      flashOutput(outputEl);
+    } catch (e) {
       outputEl.value = "";
-      showToast("Error: " + e.message);
+    }
+  }
+
+  document.getElementById("generateBtn").addEventListener("click", () => {
+    const raw = document.getElementById("create-input").value.trim();
+    if (!raw) { showToast("Paste your brief first."); return; }
+    try {
+      const outputEl = document.getElementById("create-output");
+      outputEl.value = create(raw);
+      flashOutput(outputEl);
+      showToast("Generated!");
+    } catch (e) {
+      document.getElementById("create-output").value = "";
+      showToast("Error: " + e.message, true);
     }
   });
 
-  document.getElementById("copyBtn").addEventListener("click", () => {
-    const text = outputEl.value;
-    if (!text) {
-      showToast("Nothing to copy.");
-      return;
-    }
-    navigator.clipboard.writeText(text).then(() => showToast("Copied!"));
-  });
+  // ── Auto-refresh on input change ──
 
-  document.getElementById("clearBtn").addEventListener("click", () => {
-    inputEl.value = "";
-    outputEl.value = "";
-    inputEl.focus();
+  document.getElementById("convert-input").addEventListener("input", runConvert);
+  document.getElementById("create-input").addEventListener("input", runCreate);
+
+  // ── Keyboard shortcut: Cmd/Ctrl+Enter ──
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      const convertSection = document.getElementById("convert-section");
+      if (!convertSection.classList.contains("hidden")) {
+        document.getElementById("convertBtn").click();
+      } else {
+        document.getElementById("generateBtn").click();
+      }
+    }
   });
 </script>
 
