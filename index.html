@@ -3,17 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Report Highlights Tool</title>
+  <title>Report Tools</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-<h1>Report Highlights Tool</h1>
-<p class="subtitle">Convert old markup or create new report-highlights HTML from scratch.</p>
+<h1>Report Tools</h1>
+<p class="subtitle">Convert old markup, create new report-highlights, or beautify tables.</p>
 
 <div class="tabs">
   <button class="tab active" data-tab="convert">Convert</button>
   <button class="tab" data-tab="create">Create</button>
+  <button class="tab" data-tab="table">Table Beautifier</button>
 </div>
 
 <!-- Convert section -->
@@ -49,6 +50,24 @@
   <div class="actions">
     <button class="copy-btn" data-target="create-output">Copy Output</button>
     <button class="clear-btn" data-input="create-input" data-output="create-output">Clear</button>
+  </div>
+</section>
+
+<!-- Table Beautifier section -->
+<section id="table-section" class="section hidden">
+  <div class="container">
+    <div class="panel">
+      <label for="table-input">Any HTML Table</label>
+      <textarea id="table-input" spellcheck="false" placeholder="Paste any HTML &lt;table&gt; here..."></textarea>
+    </div>
+    <div class="panel">
+      <label for="table-output">Beautified Table</label>
+      <textarea id="table-output" readonly spellcheck="false" placeholder="Styled table will appear here..."></textarea>
+    </div>
+  </div>
+  <div class="actions">
+    <button class="copy-btn" data-target="table-output">Copy Output</button>
+    <button class="clear-btn" data-input="table-input" data-output="table-output">Clear</button>
   </div>
 </section>
 
@@ -256,10 +275,104 @@
     }
   }
 
+  // ── Table Beautifier ──
+
+  function beautifyTable(html) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+    const table = doc.querySelector("table");
+
+    if (!table) {
+      throw new Error("Could not find a <table> element.");
+    }
+
+    // Extract header cells
+    const headers = [];
+    const thEls = table.querySelectorAll("thead th, thead td, tr:first-child th");
+    thEls.forEach((th) => headers.push(th.textContent.trim()));
+
+    // If no thead, check if first row has <th> or looks like a header
+    let bodyRows;
+    if (headers.length > 0) {
+      bodyRows = table.querySelectorAll("tbody tr");
+      if (bodyRows.length === 0) {
+        // No explicit tbody — grab all rows after the first
+        const allRows = table.querySelectorAll("tr");
+        bodyRows = Array.from(allRows).slice(1);
+      }
+    } else {
+      // No thead or <th> — treat first row as header
+      const allRows = table.querySelectorAll("tr");
+      if (allRows.length === 0) throw new Error("Table has no rows.");
+      const firstRow = allRows[0];
+      firstRow.querySelectorAll("td, th").forEach((c) => headers.push(c.textContent.trim()));
+      bodyRows = Array.from(allRows).slice(1);
+    }
+
+    if (headers.length === 0) throw new Error("Could not determine table headers.");
+
+    // Extract body data (preserve innerHTML for links, bold, etc.)
+    const rows = [];
+    bodyRows.forEach((tr) => {
+      const cells = [];
+      tr.querySelectorAll("td, th").forEach((c) => cells.push(c.innerHTML.trim()));
+      if (cells.length > 0) rows.push(cells);
+    });
+
+    // Style constants
+    const TABLE = 'border-collapse: collapse; width: 100%; margin: 0 auto 20px auto; border-left: 4px solid #C59925;';
+    const TR_HEAD = 'background: #2a2a2a;';
+    const TH = 'padding: 12px 15px; text-align: center; color: #D44B3E; font-weight: 600; border-bottom: 1px solid #444;';
+    const BG_ODD = '#252525';
+    const BG_EVEN = '#1e1e1e';
+    const BORDER_BOTTOM = ' border-bottom: 1px solid #333;';
+
+    // Build output
+    let out = '<table style="' + TABLE + '">\n';
+
+    // thead
+    out += '  <thead>\n    <tr style="' + TR_HEAD + '">\n';
+    headers.forEach((h) => {
+      out += '      <th style="' + TH + '">' + h + '</th>\n';
+    });
+    out += '    </tr>\n  </thead>\n';
+
+    // tbody
+    out += '  <tbody>\n';
+    rows.forEach((cells, i) => {
+      const bg = i % 2 === 0 ? BG_ODD : BG_EVEN;
+      const isLast = i === rows.length - 1;
+      const border = isLast ? '' : BORDER_BOTTOM;
+
+      out += '    <tr>\n';
+      cells.forEach((cell) => {
+        out += '      <td style="padding: 12px 15px; text-align: center; background: ' + bg + ';' + border + '">' + cell + '</td>\n';
+      });
+      out += '    </tr>\n';
+    });
+    out += '  </tbody>\n</table>';
+
+    return out;
+  }
+
+  function runTable() {
+    const inputEl = document.getElementById("table-input");
+    const outputEl = document.getElementById("table-output");
+    const raw = inputEl.value.trim();
+    if (!raw) { outputEl.value = ""; return; }
+    try {
+      outputEl.value = beautifyTable(raw);
+      flashOutput(outputEl);
+    } catch (e) {
+      outputEl.value = "";
+    }
+  }
+
   // ── Auto-refresh on input change ──
 
   document.getElementById("convert-input").addEventListener("input", runConvert);
   document.getElementById("create-input").addEventListener("input", runCreate);
+  document.getElementById("table-input").addEventListener("input", runTable);
 
 </script>
 
