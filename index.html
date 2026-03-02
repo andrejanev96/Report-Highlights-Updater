@@ -29,7 +29,6 @@
     </div>
   </div>
   <div class="actions">
-    <button id="convertBtn">Convert</button>
     <button class="copy-btn" data-target="convert-output">Copy Output</button>
     <button class="clear-btn" data-input="convert-input" data-output="convert-output">Clear</button>
   </div>
@@ -48,7 +47,6 @@
     </div>
   </div>
   <div class="actions">
-    <button id="generateBtn">Generate</button>
     <button class="copy-btn" data-target="create-output">Copy Output</button>
     <button class="clear-btn" data-input="create-input" data-output="create-output">Clear</button>
   </div>
@@ -192,20 +190,6 @@
     }
   }
 
-  document.getElementById("convertBtn").addEventListener("click", () => {
-    const raw = document.getElementById("convert-input").value.trim();
-    if (!raw) { showToast("Paste some HTML first."); return; }
-    try {
-      const outputEl = document.getElementById("convert-output");
-      outputEl.value = convert(raw);
-      flashOutput(outputEl);
-      showToast("Converted!");
-    } catch (e) {
-      document.getElementById("convert-output").value = "";
-      showToast("Error: " + e.message, true);
-    }
-  });
-
   // ── Create ──
 
   function create(text) {
@@ -272,38 +256,11 @@
     }
   }
 
-  document.getElementById("generateBtn").addEventListener("click", () => {
-    const raw = document.getElementById("create-input").value.trim();
-    if (!raw) { showToast("Paste your brief first."); return; }
-    try {
-      const outputEl = document.getElementById("create-output");
-      outputEl.value = create(raw);
-      flashOutput(outputEl);
-      showToast("Generated!");
-    } catch (e) {
-      document.getElementById("create-output").value = "";
-      showToast("Error: " + e.message, true);
-    }
-  });
-
   // ── Auto-refresh on input change ──
 
   document.getElementById("convert-input").addEventListener("input", runConvert);
   document.getElementById("create-input").addEventListener("input", runCreate);
 
-  // ── Keyboard shortcut: Cmd/Ctrl+Enter ──
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-      e.preventDefault();
-      const convertSection = document.getElementById("convert-section");
-      if (!convertSection.classList.contains("hidden")) {
-        document.getElementById("convertBtn").click();
-      } else {
-        document.getElementById("generateBtn").click();
-      }
-    }
-  });
 </script>
 
 </body>

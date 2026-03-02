@@ -160,17 +160,6 @@ button:active {
   transform: scale(0.97);
 }
 
-#convertBtn,
-#generateBtn {
-  background: #4a90d9;
-  color: #fff;
-}
-
-#convertBtn:hover,
-#generateBtn:hover {
-  background: #3b7dd1;
-}
-
 .copy-btn {
   background: #48bb78;
   color: #fff;
